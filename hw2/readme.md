@@ -177,9 +177,11 @@ sudo chown -R kafka:kafka /opt/kafka/kafka_server_jaas.conf
 
 ```
 /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server 192.168.0.200:9092 --command-config /home/user/client/client_admin.properties
+/opt/kafka/bin/kafka-topics.sh --describe --bootstrap-server 192.168.0.200:9092 --topic test --command-config /home/user/client/client_admin.properties
 ```
 
 ![Топики](res/topics.png)
+![Топик test](res/topic_test_describe.png)
 
 
 Первому пользователю выдаем права на запись в топик test. 
