@@ -1,0 +1,18 @@
+
+event-store:
+  topic: 'auction-events'
+  kafka:
+    bootstrapServers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093,localhost:9094}
+    clientId: ${KAFKA_CLIENT_ID:command-app1}
+    producer:
+      properties:
+        "[min.insync.replicas]": 3
+        acks: all
+        "[enable.idempotence]": true
+    streams:
+      properties:
+        "[application.id]": ${APPLICATION_ID:command-app-test}
+        "[commit.interval.ms]": 5000
+
+server:
+  port: 8181

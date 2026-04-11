@@ -1,0 +1,209 @@
+networks:
+  auction-net:
+    driver: bridge
+
+services:
+  zookeeper-auction:
+    image: confluentinc/cp-zookeeper:7.0.9
+    networks:
+      - auction-net
+    container_name: zookeeper-auction
+    healthcheck:
+      test: "[[ $$(echo srvr | nc localhost 2181 | grep -oG 'Mode: standalone') = \"Mode: standalone\" ]]"
+      interval: 10s
+      timeout: 1s
+      retries: 30
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka1-auction:
+    image: confluentinc/cp-kafka:7.0.9
+    networks:
+      - auction-net
+    container_name: kafka1-auction
+    depends_on:
+      zookeeper-auction:
+        condition: service_healthy
+    healthcheck:
+      test: "test $$( /usr/bin/zookeeper-shell zookeeper:2181 get /brokers/ids/1 | grep { ) != ''"
+      interval: 3s
+      timeout: 2s
+      retries: 300
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper-auction:2181'
+      #KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,PLAINTEXT_HOST2:PLAINTEXT
+      KAFKA_LISTENERS: LISTENER_DOCKER_INTERNAL://0.0.0.0:19092,LISTENER_DOCKER_EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka1-auction:19092,LISTENER_DOCKER_EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_CLEANER_ENABLE: "true"  # Включает Log Cleaner
+      KAFKA_LOG_CLEANER_THREADS: 2      # Опционально: количество потоков для очистки
+    ports:
+      - "9092:9092"
+      - "19092:19092"
+
+  kafka2-auction:
+    image: confluentinc/cp-kafka:7.0.9
+    networks:
+      - auction-net
+    container_name: kafka2-auction
+    depends_on:
+      zookeeper-auction:
+        condition: service_healthy
+    healthcheck:
+      test: "test $$( /usr/bin/zookeeper-shell zookeeper:2181 get /brokers/ids/2 | grep { ) != ''"
+      interval: 3s
+      timeout: 2s
+      retries: 300
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper-auction:2181'
+      #KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,PLAINTEXT_HOST2:PLAINTEXT
+      KAFKA_LISTENERS: LISTENER_DOCKER_INTERNAL://0.0.0.0:19093,LISTENER_DOCKER_EXTERNAL://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka2-auction:19093,LISTENER_DOCKER_EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_CLEANER_ENABLE: "true"  # Включает Log Cleaner
+      KAFKA_LOG_CLEANER_THREADS: 2      # Опционально: количество потоков для очистки
+    ports:
+      - "9093:9093"
+      - "19093:19093"
+
+  kafka3-auction:
+    image: confluentinc/cp-kafka:7.0.9
+    networks:
+      - auction-net
+    container_name: kafka3-auction
+    depends_on:
+      zookeeper-auction:
+        condition: service_healthy
+    healthcheck:
+      test: "test $$( /usr/bin/zookeeper-shell zookeeper:2181 get /brokers/ids/3 | grep { ) != ''"
+      interval: 3s
+      timeout: 2s
+      retries: 300
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper-auction:2181'
+      #KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,PLAINTEXT_HOST2:PLAINTEXT
+      KAFKA_LISTENERS: LISTENER_DOCKER_INTERNAL://0.0.0.0:19094,LISTENER_DOCKER_EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka3-auction:19094,LISTENER_DOCKER_EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_CLEANER_ENABLE: "true"  # Включает Log Cleaner
+      KAFKA_LOG_CLEANER_THREADS: 2      # Опционально: количество потоков для очистки
+    ports:
+      - "9094:9094"
+      - "19094:19094"
+
+  # Сервис для создания топиков
+  init-kafka:
+    image: confluentinc/cp-kafka:7.0.9
+    container_name: init-kafka-auction
+    networks:
+      - auction-net
+    depends_on:
+      - kafka1-auction
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # Ожидание запуска Kafka
+      cub kafka-ready -b kafka1-auction:19092 1 30
+      
+      # Создание топика
+      kafka-topics --bootstrap-server kafka1-auction:19092 --create --if-not-exists --topic auction-events \
+      --partitions 3 --replication-factor 3
+      
+      kafka-topics --bootstrap-server kafka1-auction:19092 --create --if-not-exists --topic active-auctions-snapshots \
+      --partitions 3 --replication-factor 3 --config cleanup.policy=compact --config min.compaction.lag.ms=0 --config segment.ms=60000 --config segment.bytes=1024
+      
+      kafka-topics --bootstrap-server kafka1-auction:19092 --create --if-not-exists --topic bet-stat-snapshots \
+      --partitions 3 --replication-factor 3 --config cleanup.policy=compact --config min.compaction.lag.ms=0 --config segment.ms=60000 --config segment.bytes=1024
+      "
+
+  kafdrop-auction:
+    image: obsidiandynamics/kafdrop:4.1.0
+    networks:
+      - auction-net
+    container_name: kafdrop-auction
+    restart: "always"
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka1-auction:19092,kafka2-auction:19093,kafka3-auction:19094"
+      JVM_OPTS: "-Xms32M -Xmx128M"
+    depends_on:
+      - "kafka1-auction"
+      - "kafka2-auction"
+      - "kafka3-auction"
+      
+  auction-command-service:
+    env_file: "command-service.env"
+    image: auction-command-service
+    deploy:
+      replicas: 3
+    networks:
+      - auction-net
+    depends_on:
+      - init-kafka
+    expose:
+      - "8081"
+    environment:
+      - JAVA_OPTS=-Xmx256m
+      - INSTANCE_NAME=${HOSTNAME}
+
+  auction-query-service:
+    env_file: "query-service.env"
+    image: auction-query-service
+    deploy:
+      replicas: 3
+    networks:
+      - auction-net
+    depends_on:
+      - init-kafka
+    expose:
+      - "8091"
+    environment:
+      - JAVA_OPTS=-Xmx256m
+      - INSTANCE_NAME=${HOSTNAME}
+
+  haproxy-command:
+    image: haproxy:3.2-alpine
+    container_name: haproxy-command
+    volumes:
+      - ./haproxy-command.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "8081:8081"
+    depends_on:
+      - auction-command-service
+    networks:
+      - auction-net
+
+  haproxy-query:
+    image: haproxy:3.2-alpine
+    container_name: haproxy-query
+    volumes:
+      - ./haproxy-query.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "8091:8091"
+    depends_on:
+      - auction-query-service
+    networks:
+      - auction-net

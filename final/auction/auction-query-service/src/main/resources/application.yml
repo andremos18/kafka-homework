@@ -1,0 +1,17 @@
+event-store:
+  topic: 'auction-events'
+  kafka:
+    bootstrapServers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093,localhost:9094}
+    clientId: ${KAFKA_CLIENT_ID:query-app1}
+    producer:
+      properties:
+        "[min.insync.replicas]": 2
+        "[commit.interval.ms]": 5000
+        acks: all
+    streams:
+      properties:
+        "[application.id]": ${APPLICATION_ID:query-app}
+        "[commit.interval.ms]": 10000
+
+server:
+  port: 8191
