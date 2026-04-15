@@ -2,10 +2,10 @@ package ru.andremos.auction.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.StoreQueryParameters;
+import org.apache.kafka.streams.processor.StreamPartitioner;
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
@@ -17,6 +17,8 @@ import org.springframework.web.client.RestClient;
 import ru.andremos.auction.dto.Auction;
 import ru.andremos.auction.dto.Auctions;
 import ru.andremos.auction.model.aggregates.AuctionState;
+import ru.andremos.auction.model.events.BaseEvent;
+import ru.andremos.auction.model.utils.PartitionCalculator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,20 +32,31 @@ public class EventStoreService {
     private final StreamsBuilderFactoryBean eventStoreStreamsBuilder;
     private final RestClient auctionStoreClient;
 
+    public void stopStream() {
+        eventStoreStreamsBuilder.stop();
+    }
+
+    public void startStream() {
+        eventStoreStreamsBuilder.start();
+    }
+
     public Auction getUserAuction(Integer auctionId) {
         HostInfo hostInfo = getOwner(auctionId);
         String hostName = getHostName();
 
+        log.info("this endpoint is {}:{}", hostName, port);
+        log.info("host owner auctionId {} is {}:{}", auctionId, hostInfo.host(), hostInfo.port());
         AuctionState auctionState;
         if (hostName.equals(hostInfo.host()) && hostInfo.port() == port || hostInfo.host().equals("unavailable")) {
-            log.info("Query to local store");
+            log.info("Query auctionId: {} to local store", auctionId);
             ReadOnlyKeyValueStore<Integer, AuctionState> store = eventStoreStreamsBuilder.getKafkaStreams().store(StoreQueryParameters
                     .fromNameAndType("auction-read-state-store", QueryableStoreTypes.keyValueStore()));
 
             auctionState = store.get(auctionId);
         }  else {
+            log.info("Query {} to {}:{}", auctionId, hostInfo.host(), hostInfo.port());
             auctionState = auctionStoreClient.get()
-                    .uri("http://{host}:{port}/auction/aggregate/{auctionId}", hostInfo.host(), hostInfo.port(), auctionId)
+                    .uri("http://{host}:{port}/user/auction/{auctionId}", hostInfo.host(), hostInfo.port(), auctionId)
                     .retrieve()
                     .body(AuctionState.class);
         }
@@ -79,6 +92,7 @@ public class EventStoreService {
                         .name(aggregate.value.getName())
                         .currentPrice(aggregate.value.getCurrentPrice())
                         //.isHighestBidder(aggregate.value.getHighestBidderId().equals(userId))
+                        .highestBidderUserName(aggregate.value.getHighestBidderUserName())
                         .highestBidderId(aggregate.value.getHighestBidderId())
                         .isActive(aggregate.value.isActive())
                         .isDeleted(aggregate.value.isDeleted())
@@ -95,8 +109,10 @@ public class EventStoreService {
 
     private HostInfo getOwner(Integer auctionId) {
         // Ищем метаданные для конкретного ключа в конкретном State Store
+        StreamPartitioner<Integer, BaseEvent> customPartitioner =
+                (topic, key, value, numPartitions) -> PartitionCalculator.calculateNumPartition(key, numPartitions);
         KeyQueryMetadata metadata = eventStoreStreamsBuilder.getKafkaStreams()
-                .queryMetadataForKey("auction-read-state-store", auctionId, Serdes.Integer().serializer());
+                .queryMetadataForKey("auction-read-state-store", auctionId, customPartitioner);
 
         return metadata.activeHost(); // Возвращает host и port узла
     }

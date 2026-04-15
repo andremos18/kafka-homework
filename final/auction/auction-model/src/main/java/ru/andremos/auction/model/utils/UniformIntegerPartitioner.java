@@ -1,4 +1,4 @@
-package ru.andremos.auction.utils;
+package ru.andremos.auction.model.utils;
 
 import org.apache.kafka.clients.producer.Partitioner;
 import org.apache.kafka.common.Cluster;
@@ -24,11 +24,11 @@ public class UniformIntegerPartitioner implements Partitioner {
 
         if (keyBytes == null) {
             // используем Round Robin
-            return org.apache.kafka.common.utils.Utils.toPositive(counter.getAndIncrement()) % numPartitions;
+            return Utils.toPositive(counter.getAndIncrement()) % numPartitions;
         }
 
         // Хешируем байты ключа как это делает стандартная Kafka
-        return org.apache.kafka.common.utils.Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions;
+        return Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions;
     }
 
     @Override public void close() {}

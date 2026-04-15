@@ -35,7 +35,7 @@ public class StatisticService {
                 auctionBetStat.setAuctionName(stat.value.getAuctionName());
                 auctionBetStat.setTotalDuration(stat.value.getTotalDuration());
                 auctionBetStat.setCount(stat.value.getCount());
-                if (stat.value.getCount() > 0) {
+                if (stat.value.getCount() != null && stat.value.getCount() > 0) {
                     auctionBetStat.setAvgTime((double) stat.value.getTotalDuration() / stat.value.getCount());
                 }
                 auctionBetStats.add(auctionBetStat);

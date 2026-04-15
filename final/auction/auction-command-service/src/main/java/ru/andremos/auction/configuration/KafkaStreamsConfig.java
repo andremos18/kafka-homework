@@ -27,6 +27,13 @@ public class KafkaStreamsConfig {
         props.put(StreamsConfig.STATE_DIR_CONFIG, System.getProperty("user.dir") + "/kafka-state-" + hostName);
         props.put(StreamsConfig.CLIENT_ID_CONFIG, "client-" + hostName + "-" + port);
         props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, hostName + ":" + port);
+
+        //  количество «горячих» копий состояния (State Store), которые поддерживаются на других экземплярах приложения.
+        props.put(StreamsConfig.NUM_STANDBY_REPLICAS_CONFIG, 1);
+
+
+        props.put("group.instance.id", "instance-command-"+hostName);
+
         var factoryBean = new StreamsBuilderFactoryBean(new KafkaStreamsConfiguration(props));
         factoryBean.setStateListener((newState, oldState) -> {
             System.out.println("Kafka Streams state changed from " + oldState + " to " + newState);

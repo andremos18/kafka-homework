@@ -1,12 +1,14 @@
 package ru.andremos.auction.configuration;
 
 import org.apache.kafka.common.serialization.IntegerSerializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import ru.andremos.auction.configuration.properties.EventStoreProperties;
 import ru.andremos.auction.model.events.BaseEvent;
+import ru.andremos.auction.model.messages.UserMessage;
 
 @Configuration
 public class ProducerKafkaConfig {
@@ -15,8 +17,17 @@ public class ProducerKafkaConfig {
     public KafkaTemplate<Integer, BaseEvent> eventStoreKafkaTemplate(EventStoreProperties properties,
                                                                     EventStoreSerializer serializer) {
         final var props = properties.getKafka().buildProducerProperties();
-        props.put("partitioner.class", "ru.andremos.auction.utils.UniformIntegerPartitioner");
+        props.put("partitioner.class", "ru.andremos.auction.model.utils.UniformIntegerPartitioner");
         final var producerFactory = new DefaultKafkaProducerFactory<>(props, new IntegerSerializer(), serializer);
+
+        return new KafkaTemplate<>(producerFactory);
+    }
+
+    @Bean
+    public KafkaTemplate<String, UserMessage> userRegisterKafkaTemplate(EventStoreProperties properties,
+                                                                         UserRegisterSerializer serializer) {
+        final var props = properties.getKafka().buildProducerProperties();
+        final var producerFactory = new DefaultKafkaProducerFactory<>(props, new StringSerializer(), serializer);
 
         return new KafkaTemplate<>(producerFactory);
     }

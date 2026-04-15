@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.OffsetDateTime;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -24,4 +26,8 @@ public class BetDurationStat {
      * количество ставок за время totalDuration
      */
     private Long count;
+
+    private OffsetDateTime startTime;
+
+    private boolean isDeleted = false;
 }

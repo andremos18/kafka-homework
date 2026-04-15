@@ -8,14 +8,17 @@ import ru.andremos.auction.dto.AuctionCreateRequest;
 import ru.andremos.auction.dto.ActionResponse;
 import ru.andremos.auction.dto.AuctionDeleteRequest;
 import ru.andremos.auction.dto.BidPlacedRequest;
-import ru.andremos.auction.exeptions.AuctionExistsException;
+import ru.andremos.auction.dto.UserRegisterRequest;
+import ru.andremos.auction.dto.UserRegisteredResponse;
 import ru.andremos.auction.exeptions.AuctionNotActiveException;
+import ru.andremos.auction.exeptions.AuctionNotFoundException;
 import ru.andremos.auction.exeptions.BidNotValidException;
 import ru.andremos.auction.model.aggregates.AuctionState;
 import ru.andremos.auction.model.events.AuctionCreatedEvent;
 import ru.andremos.auction.model.events.AuctionChangeStatusEvent;
 import ru.andremos.auction.model.events.AuctionDeletedEvent;
 import ru.andremos.auction.model.events.BidPlacedEvent;
+import ru.andremos.auction.model.messages.UserMessage;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -27,11 +30,20 @@ public class AuctionService {
     private final EventStoreService eventStoreService;
     private final ProducerEventService producerEventService;
 
+    public UserRegisteredResponse registerUser(UserRegisterRequest userRegisterRequest) {
+        UserMessage userMessage = new UserMessage();
+        userMessage.setId(userRegisterRequest.getId());
+        userMessage.setName(userRegisterRequest.getName());
+        producerEventService.send(userMessage);
+        UserRegisteredResponse res = new UserRegisteredResponse();
+        res.setInstanceName(getInstanceId());
+        return res;
+    }
 
     public ActionResponse createAuction(AuctionCreateRequest auctionCreateRequest) {
         AuctionState auctionState = eventStoreService.getAuctionState(auctionCreateRequest.getAuctionId());
         if (auctionState != null) {
-            throw new AuctionExistsException("аукцион уже существует");
+            throw new AuctionNotFoundException("аукцион уже существует");
         }
         var event = new AuctionCreatedEvent();
         event.setAuctionId(auctionCreateRequest.getAuctionId());
@@ -49,7 +61,11 @@ public class AuctionService {
         Integer auctionId = bidPlacedRequest.getAuctionId();
         AuctionState auctionState = eventStoreService.getAuctionState(auctionId);
 
-        if (auctionState == null || !auctionState.isActive() || auctionState.isDeleted()) {
+        if (auctionState == null) {
+            throw new AuctionNotFoundException("аукцион не существует");
+        }
+
+        if (!auctionState.isActive() || auctionState.isDeleted()) {
             throw new AuctionNotActiveException("аукцион не активен");
         }
 
@@ -73,6 +89,15 @@ public class AuctionService {
     }
 
     public ActionResponse changeStatus(Integer auctionId, AuctionChangeStatusRequest auctionChangeStatusRequest) {
+        AuctionState auctionState = eventStoreService.getAuctionState(auctionId);
+        if (auctionState == null) {
+            throw new AuctionNotFoundException("аукцион не существует");
+        }
+
+        if (auctionState.isDeleted()) {
+            throw new AuctionNotActiveException("аукцион не удален");
+        }
+
         var event = new AuctionChangeStatusEvent();
         event.setAuctionId(auctionId);
         event.setActive(auctionChangeStatusRequest.getIsActive());
@@ -86,6 +111,10 @@ public class AuctionService {
 
     public ActionResponse deleteAuction(AuctionDeleteRequest auctionDeleteRequest) {
         AuctionState auctionState = eventStoreService.getAuctionState(auctionDeleteRequest.getAuctionId());
+        if (auctionState == null) {
+            throw new AuctionNotFoundException("аукцион не существует");
+        }
+
         if (!auctionState.isDeleted()) {
             var event = new AuctionDeletedEvent();
             event.setAuctionId(auctionDeleteRequest.getAuctionId());

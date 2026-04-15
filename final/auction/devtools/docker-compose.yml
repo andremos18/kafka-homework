@@ -41,12 +41,12 @@ services:
       KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka1-auction:19092,LISTENER_DOCKER_EXTERNAL://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3 # коэффициент репликации для топика __consumer_offsets
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2 # минимальное количество синхронных реплик (ISR) топика __transaction_state для подтверждения записи
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3 # коэффициент репликации для топика __transaction_state
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_CLEANER_ENABLE: "true"  # Включает Log Cleaner
-      KAFKA_LOG_CLEANER_THREADS: 2      # Опционально: количество потоков для очистки
+      KAFKA_LOG_CLEANER_THREADS: 1      # Опционально: количество потоков для очистки
     ports:
       - "9092:9092"
       - "19092:19092"
@@ -72,12 +72,12 @@ services:
       KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka2-auction:19093,LISTENER_DOCKER_EXTERNAL://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_CLEANER_ENABLE: "true"  # Включает Log Cleaner
-      KAFKA_LOG_CLEANER_THREADS: 2      # Опционально: количество потоков для очистки
+      KAFKA_LOG_CLEANER_THREADS: 1      # Опционально: количество потоков для очистки
     ports:
       - "9093:9093"
       - "19093:19093"
@@ -103,12 +103,12 @@ services:
       KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka3-auction:19094,LISTENER_DOCKER_EXTERNAL://localhost:9094
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_CLEANER_ENABLE: "true"  # Включает Log Cleaner
-      KAFKA_LOG_CLEANER_THREADS: 2      # Опционально: количество потоков для очистки
+      KAFKA_LOG_CLEANER_THREADS: 1      # Опционально: количество потоков для очистки
     ports:
       - "9094:9094"
       - "19094:19094"
@@ -121,6 +121,8 @@ services:
       - auction-net
     depends_on:
       - kafka1-auction
+      - kafka2-auction
+      - kafka3-auction
     entrypoint: [ '/bin/sh', '-c' ]
     command: |
       "
@@ -132,10 +134,13 @@ services:
       --partitions 3 --replication-factor 3
       
       kafka-topics --bootstrap-server kafka1-auction:19092 --create --if-not-exists --topic active-auctions-snapshots \
-      --partitions 3 --replication-factor 3 --config cleanup.policy=compact --config min.compaction.lag.ms=0 --config segment.ms=60000 --config segment.bytes=1024
+      --partitions 3 --replication-factor 3 --config cleanup.policy=compact --config min.compaction.lag.ms=0 --config segment.ms=60000 --config segment.bytes=1024 --config delete.retention.ms=10000
       
       kafka-topics --bootstrap-server kafka1-auction:19092 --create --if-not-exists --topic bet-stat-snapshots \
-      --partitions 3 --replication-factor 3 --config cleanup.policy=compact --config min.compaction.lag.ms=0 --config segment.ms=60000 --config segment.bytes=1024
+      --partitions 3 --replication-factor 3 --config cleanup.policy=compact --config min.compaction.lag.ms=0 --config segment.ms=60000 --config segment.bytes=1024 --config delete.retention.ms=10000
+      
+      kafka-topics --bootstrap-server kafka1-auction:19092 --create --if-not-exists --topic auction-users \
+      --partitions 3 --replication-factor 3 --config cleanup.policy=compact --config min.compaction.lag.ms=0 --config segment.ms=60000 --config segment.bytes=1024 --config delete.retention.ms=10000
       "
 
   kafdrop-auction:
@@ -162,12 +167,12 @@ services:
     networks:
       - auction-net
     depends_on:
-      - init-kafka
+      init-kafka:
+        condition: service_completed_successfully
     expose:
       - "8081"
     environment:
       - JAVA_OPTS=-Xmx256m
-      - INSTANCE_NAME=${HOSTNAME}
 
   auction-query-service:
     env_file: "query-service.env"
@@ -177,12 +182,12 @@ services:
     networks:
       - auction-net
     depends_on:
-      - init-kafka
+      init-kafka:
+        condition: service_completed_successfully
     expose:
       - "8091"
     environment:
       - JAVA_OPTS=-Xmx256m
-      - INSTANCE_NAME=${HOSTNAME}
 
   haproxy-command:
     image: haproxy:3.2-alpine

@@ -14,5 +14,6 @@ public class Auction {
     private boolean isActive;
     private boolean isDeleted;
     private String highestBidderId;
+    private String highestBidderUserName;
     private String instanceName;
 }

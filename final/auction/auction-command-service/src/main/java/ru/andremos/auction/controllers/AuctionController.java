@@ -15,6 +15,8 @@ import ru.andremos.auction.dto.AuctionCreateRequest;
 import ru.andremos.auction.dto.ActionResponse;
 import ru.andremos.auction.dto.AuctionDeleteRequest;
 import ru.andremos.auction.dto.BidPlacedRequest;
+import ru.andremos.auction.dto.UserRegisterRequest;
+import ru.andremos.auction.dto.UserRegisteredResponse;
 import ru.andremos.auction.model.aggregates.AuctionState;
 import ru.andremos.auction.service.AuctionService;
 import ru.andremos.auction.service.EventStoreService;
@@ -26,6 +28,11 @@ public class AuctionController {
 
     private final EventStoreService eventStoreService;
     private final AuctionService auctionService;
+
+    @GetMapping("/api/version")
+    public String getVersion() {
+        return "1.1";
+    }
 
     @GetMapping("/state/{auctionId}")
     public AuctionState getAuctionState(@PathVariable Integer auctionId) {
@@ -50,5 +57,10 @@ public class AuctionController {
     @PostMapping("/bid")
     public ActionResponse createBidPlaced(@RequestBody @Valid BidPlacedRequest bidPlacedRequest) {
         return auctionService.createBidPlaced(bidPlacedRequest);
+    }
+
+    @PostMapping("/user")
+    public UserRegisteredResponse registerUser(@RequestBody @Valid UserRegisterRequest userRegisterRequest) {
+        return auctionService.registerUser(userRegisterRequest);
     }
 }

@@ -42,6 +42,11 @@
       <artifactId>kafka-streams</artifactId>
       <version>3.9.2</version>
     </dependency>
+      <dependency>
+        <groupId>org.zalando</groupId>
+        <artifactId>logbook-spring-boot-starter</artifactId>
+        <version>3.9.0</version>
+      </dependency>
   </dependencies>
   </dependencyManagement>
 

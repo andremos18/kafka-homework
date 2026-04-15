@@ -19,10 +19,8 @@ public class AuctionStreamTopologyConfig {
 
     @Bean
     public KStream<Integer, AuctionState> auctionEvents(StreamsBuilder eventStoreStreamsBuilder) {
-        // Описываем логику свертки (Fold/Reduce)
         KTable<Integer, AuctionState> auctionTable = eventStoreStreamsBuilder
                 .stream("auction-events", Consumed.with(Serdes.Integer(), new JsonSerde<>(BaseEvent.class)))
-                //.stream("auction-events", Consumed.with(Serdes.String(), serde))
                 .groupByKey()
                 .aggregate(
                         AuctionState::new, // Инициализация (Initial State)

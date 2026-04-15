@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Data
 @ConfigurationProperties(prefix = "event-store")
 public class EventStoreProperties {
-    private String topic;
+    private String eventsTopic;
+    private String userRegisterTopic;
     private KafkaProperties kafka;
 }

@@ -2,9 +2,9 @@ package ru.andremos.auction.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.StoreQueryParameters;
+import org.apache.kafka.streams.processor.StreamPartitioner;
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
@@ -14,6 +14,8 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import ru.andremos.auction.model.aggregates.AuctionState;
+import ru.andremos.auction.model.events.BaseEvent;
+import ru.andremos.auction.model.utils.PartitionCalculator;
 
 @Slf4j
 @Service
@@ -26,8 +28,10 @@ public class EventStoreService {
 
     private HostInfo getOwner(Integer auctionId) {
         // Ищем метаданные для конкретного ключа в конкретном State Store
+        StreamPartitioner<Integer, BaseEvent> customPartitioner =
+                (topic, key, value, numPartitions) -> PartitionCalculator.calculateNumPartition(key, numPartitions);
         KeyQueryMetadata metadata = eventStoreStreamsBuilder.getKafkaStreams()
-                .queryMetadataForKey("auction-state-store", auctionId, Serdes.Integer().serializer());
+                .queryMetadataForKey("auction-state-store", auctionId, customPartitioner);
 
         return metadata.activeHost(); // Возвращает host и port узла
     }

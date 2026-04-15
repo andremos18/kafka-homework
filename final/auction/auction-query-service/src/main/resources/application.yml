@@ -2,7 +2,7 @@ event-store:
   topic: 'auction-events'
   kafka:
     bootstrapServers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093,localhost:9094}
-    clientId: ${KAFKA_CLIENT_ID:query-app1}
+    clientId: ${KAFKA_CLIENT_ID:query-app-test}
     producer:
       properties:
         "[min.insync.replicas]": 2
@@ -10,8 +10,30 @@ event-store:
         acks: all
     streams:
       properties:
-        "[application.id]": ${APPLICATION_ID:query-app}
+        "[application.id]": ${APPLICATION_ID:query-app-test}
         "[commit.interval.ms]": 10000
+        "[session.timeout.ms]": 10000
+
+logging:
+  level:
+    ru.andremos.auction: DEBUG
+    org.zalando.logbook: TRACE
+    root: ERROR
+
+logbook:
+  format:
+    style: http
+  write:
+    max-body-size: 10000
+
+management:
+  endpoint:
+    shutdown:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "health,shutdown,info"
 
 server:
   port: 8191
