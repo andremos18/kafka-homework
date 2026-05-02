@@ -1,0 +1,43 @@
+
+event-store:
+  eventsTopic: 'auction-events'
+  userRegisterTopic: 'auction-users'
+  kafka:
+    bootstrapServers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093,localhost:9094}
+    clientId: ${KAFKA_CLIENT_ID:command-app-test}
+    producer:
+      properties:
+        "[min.insync.replicas]": 2 # минимальное количество подтверждений, необходимых для успешной записи
+        acks: all
+        "[enable.idempotence]": true # включает режим «идемпотентного продюсера»
+    streams:
+      properties:
+        "[application.id]": ${APPLICATION_ID:command-app-test}
+        "[commit.interval.ms]": 5000
+        "[session.timeout.ms]": 10000
+
+logging:
+  level:
+    ru.andremos.auction: DEBUG
+    org.zalando.logbook: TRACE
+    root: ERROR
+
+logbook:
+  format:
+    style: http
+  write:
+    max-body-size: 10000
+
+management:
+  endpoint:
+    shutdown:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+
+
+server:
+  port: 8181
